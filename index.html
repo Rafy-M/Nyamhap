@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYAMHAP — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header>
+      <div class="brand">
+        <div class="brand-title-row">
+          <h1>NYAMHAP</h1>
+          <div class="live-sync-badge connected" id="live-sync-badge" title="Tersinkronisasi otomatis dengan database Supabase">
+            <span class="pulse-dot"></span>
+            <span id="live-sync-text">Live Sync Aktif</span>
+          </div>
+        </div>
+        <p>Dashboard kas & penjualan</p>
+      </div>
+      <div class="tabs" id="detail-tabs">
+        <button class="tab-btn active" data-view="ringkas">Ringkas</button>
+        <button class="tab-btn" data-view="lengkap">Lengkap</button>
+      </div>
+    </header>
+
+    <!-- Filter periode -->
+    <div class="period-bar">
+      <div class="period-seg" id="period-seg">
+        <button class="period-btn" data-period="weekly">Mingguan</button>
+        <button class="period-btn" data-period="monthly">Bulanan</button>
+        <button class="period-btn" data-period="yearly">Tahunan</button>
+        <button class="period-btn active" data-period="all">Semua</button>
+      </div>
+      <span class="period-range" id="period-range"></span>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi hero">
+        <p class="label">Total Omzet</p>
+        <p class="value" id="kpi-omzet">Rp0</p>
+        <span class="sub" id="kpi-omzet-sub">Belum ada data</span>
+      </div>
+      <div class="kpi">
+        <p class="label">HPP</p>
+        <p class="value" id="kpi-hpp">Rp0</p>
+      </div>
+      <div class="kpi">
+        <p class="label">Laba Bersih</p>
+        <p class="value accent" id="kpi-laba">Rp0</p>
+      </div>
+      <div class="kpi">
+        <p class="label">Kas Usaha · 40%</p>
+        <p class="value" id="kpi-40">Rp0</p>
+      </div>
+      <div class="kpi">
+        <p class="label">Bagi Hasil · 60%</p>
+        <p class="value" id="kpi-60">Rp0</p>
+        <span class="sub" id="kpi-60-per">Rp0/orang</span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <section>
+      <div class="section-head">
+        <h2>Tren</h2>
+      </div>
+      <div class="card chart-wrap">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Bagi hasil bar -->
+    <section id="view-ringkas">
+      <div class="section-head">
+        <h2>Bagi Hasil (60%)</h2>
+      </div>
+      <div class="card">
+        <div class="split-bar">
+          <div class="seg-a" id="split-a" style="width:40%"></div>
+          <div class="seg-b" id="split-b" style="width:60%"></div>
+        </div>
+        <div class="split-legend">
+          <span class="dot-a"></span><span id="split-a-txt">Rp0 kas usaha (40%)</span>
+          <span class="dot-b"></span><span id="split-b-txt">Rp0 dibagi 3 orang (Fikar, Rafy, Tasia)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Income Diambil -->
+    <section>
+      <div class="section-head">
+        <h2>Income Diambil</h2>
+        <button class="add-btn" data-modal="income">+ Ambil Income</button>
+      </div>
+      <div class="card">
+        <div class="income-summary-row" id="income-summary-row">
+          <div class="income-stat-card">
+            <span class="stat-lbl">Hak Bagi Hasil</span>
+            <span class="stat-val" id="income-total-hak">Rp0</span>
+          </div>
+          <div class="income-stat-card">
+            <span class="stat-lbl">Sudah Diambil</span>
+            <span class="stat-val danger" id="income-total-diambil">Rp0</span>
+          </div>
+          <div class="income-stat-card">
+            <span class="stat-lbl">Sisa Bagi Hasil</span>
+            <span class="stat-val success" id="income-total-sisa">Rp0</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Nama</th>
+              <th>Catatan</th>
+              <th style="text-align:right;">Jumlah</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-income"></tbody>
+        </table>
+        <div id="pagination-income" class="table-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Penjualan -->
+    <section>
+      <div class="section-head">
+        <h2>Penjualan</h2>
+        <button class="add-btn" data-modal="penjualan">+ Tambah</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th style="text-align:center;">Qty</th>
+              <th style="text-align:right;">Omzet</th>
+              <th style="text-align:right;">HPP</th>
+              <th style="text-align:right;">Laba</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-penjualan"></tbody>
+        </table>
+        <div id="pagination-penjualan" class="table-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Pengeluaran -->
+    <section class="view-lengkap-only hidden">
+      <div class="section-head">
+        <h2>Pengeluaran</h2>
+        <button class="add-btn" data-modal="pengeluaran">+ Tambah</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Item</th>
+              <th style="text-align:right;">Jumlah</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-pengeluaran"></tbody>
+        </table>
+        <div id="pagination-pengeluaran" class="table-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Stok & Aset -->
+    <div class="grid-2 view-lengkap-only hidden">
+      <section>
+        <div class="section-head">
+          <h2>Stok Bahan</h2>
+          <button class="add-btn" data-modal="stok">+ Item</button>
+        </div>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th style="text-align:center;">Qty</th>
+                <th style="text-align:right;">Nilai</th>
+                <th style="text-align:right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="table-stok"></tbody>
+          </table>
+          <div id="pagination-stok" class="table-pagination"></div>
+          <div class="stock-total" style="margin-top: 12px;"><span>Total Nilai Bahan</span><span id="total-stok">Rp0</span></div>
+        </div>
+      </section>
+      <section>
+        <div class="section-head">
+          <h2>Aset Tetap</h2>
+          <button class="add-btn" data-modal="aset">+ Item</button>
+        </div>
+        <div class="card">
+          <ul class="stock-list" id="list-aset"></ul>
+          <div class="stock-total"><span>Total</span><span id="total-aset">Rp0</span></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Kas real -->
+    <section class="view-lengkap-only hidden">
+      <div class="section-head">
+        <div>
+          <h2>Kas & Kekayaan</h2>
+          <span class="section-subtitle">Otomatis terhubung ke Stok Bahan Baku & Laba Bersih Penjualan</span>
+        </div>
+        <button class="add-btn" data-modal="kas">+ Update Kas</button>
+      </div>
+      <div class="card">
+        <div class="people-row" id="people-row"></div>
+        <table style="margin-top:14px;">
+          <tbody id="table-kekayaan"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>Data tersimpan otomatis ke Supabase & Local Storage Backup</footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+  <script src="ledger.js"></script>
+</body>
+
+</html>
